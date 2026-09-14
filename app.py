@@ -76,7 +76,8 @@ class App(ctk.CTk):
         ctk.CTkButton(side,text="💾  Enregistrer projet",fg_color="transparent",border_width=1,command=self.save).pack(padx=18,pady=5,fill="x")
         ctk.CTkButton(side,text="📂  Ouvrir projet",fg_color="transparent",border_width=1,command=self.open_project).pack(padx=18,pady=5,fill="x")
         ctk.CTkLabel(side,text="EXPORT",font=ctk.CTkFont(size=11,weight="bold"),text_color="#8b93a6").pack(padx=25,pady=(30,8),anchor="w")
-        ctk.CTkButton(side,text="🎬  Créer la vidéo",height=48,command=self.render).pack(padx=18,pady=5,fill="x")
+        self.create_btn=ctk.CTkButton(side,text="🎬  Créer la vidéo",height=48,command=self.render)
+        self.create_btn.pack(padx=18,pady=5,fill="x")
         ctk.CTkButton(side,text="↗  Ouvrir le dossier",fg_color="transparent",border_width=1,command=self.open_output).pack(padx=18,pady=5,fill="x")
         ctk.CTkLabel(side,text="Vidéo locale • Windows",text_color="#778095").pack(side="bottom",padx=18,pady=18,anchor="w")
         head=ctk.CTkFrame(self,height=70,corner_radius=0,fg_color=("#ffffff","#11151e")); head.grid(row=0,column=1,sticky="ew")
@@ -131,30 +132,56 @@ class App(ctk.CTk):
             engine.check_media_format(s["background"],self.format.get())
         return scenes
     def render(self):
-        try: scenes=self.collect()
-        except Exception as e:return messagebox.showerror("Vérification",str(e))
-        OUTPUT.mkdir(exist_ok=True); TEMP.mkdir(exist_ok=True)
+        try:
+            scenes=self.collect()
+        except Exception as e:
+            messagebox.showerror("Vérification",str(e)); return
+        OUTPUT.mkdir(parents=True,exist_ok=True); TEMP.mkdir(parents=True,exist_ok=True)
         name=self.output.get().strip() or "ma_video.mp4"
-        if not name.lower().endswith(".mp4"): name+=".mp4"
+        if not name.lower().endswith(".mp4"): name += ".mp4"
         out=OUTPUT/name
-        voice,pitch=engine.VOICES[self.voice.get()]
-        settings={"format":self.format.get(),"voice":voice,"pitch":pitch,"zoom":float(self.zoom.get()),
-                  "music":self.music.get().strip(),"music_volume":.10,"fps":24,"project_dir":str(APP),"temp_dir":str(TEMP)}
-        self.status.configure(text="● Rendu en cours",text_color="#ffbf4a"); self.progress.configure(mode="indeterminate"); self.progress.start()
-        self.log.delete("1.0","end"); self.write_log("Démarrage du rendu…")
+        try:
+            voice,pitch=engine.VOICES[self.voice.get()]
+            settings={"format":self.format.get(),"voice":voice,"pitch":pitch,"zoom":float(self.zoom.get()),"music":self.music.get().strip(),"music_volume":.10,"fps":24,"project_dir":str(APP),"temp_dir":str(TEMP)}
+        except Exception as e:
+            messagebox.showerror("Réglages",str(e)); return
+        self.status.configure(text="● Production en cours…",text_color="#ffbf4a")
+        self.progress.configure(mode="indeterminate"); self.progress.start(12)
+        self.log.delete("1.0","end")
+        self.write_log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        self.write_log("TY-VIDEOS-STUDIO — DÉMARRAGE")
+        self.write_log(f"Format : {settings['format']}")
+        self.write_log(f"Scènes : {len(scenes)}")
+        self.write_log(f"Sortie : {out}")
+        self.write_log("La génération peut prendre plusieurs minutes.")
+        self.write_log("La voix off nécessite une connexion Internet.")
+        self.write_log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        self.create_btn.configure(state="disabled")
         def work():
             try:
-                engine.render_project(scenes,settings,out,self.write_log)
-                self.after(0,lambda:messagebox.showinfo("Terminé",f"Votre vidéo est prête :\n{out}"))
+                result=engine.render_project(scenes,settings,out,self.write_log)
+                self.after(0,lambda:self.render_success(result))
             except Exception as e:
-                self.write_log("ERREUR : "+str(e)); self.write_log(traceback.format_exc())
-                self.after(0,lambda:messagebox.showerror("Erreur de rendu",str(e)))
+                self.write_log("ERREUR DE PRODUCTION : "+str(e))
+                self.write_log(traceback.format_exc())
+                self.after(0,lambda msg=str(e):self.render_error(msg))
             finally:
                 self.after(0,self.finish)
         threading.Thread(target=work,daemon=True).start()
+
+    def render_success(self,result):
+        self.status.configure(text="● Vidéo créée",text_color="#5bd28c")
+        messagebox.showinfo("Ty-Videos-Studio",f"La vidéo a été créée avec succès.\n\nFichier :\n{result}")
+
+    def render_error(self,msg):
+        self.status.configure(text="● Erreur",text_color="#ff6b6b")
+        messagebox.showerror("Erreur de production","La production n'a pas pu se terminer.\n\n"+msg+"\n\nConsulte le journal en bas de la fenêtre pour le détail.")
+
     def finish(self):
         self.progress.stop(); self.progress.configure(mode="determinate"); self.progress.set(1)
-        self.status.configure(text="● Prêt",text_color="#5bd28c")
+        self.create_btn.configure(state="normal")
+        if self.status.cget("text")=="● Production en cours…":
+            self.status.configure(text="● Prêt",text_color="#5bd28c")
     def save(self):
         data={"format":self.format.get(),"music":self.music.get(),"voice":self.voice.get(),"zoom":self.zoom.get(),"output":self.output.get(),
               "scenes":[s.get() for s in self.scenes]}

@@ -5,7 +5,7 @@ Inspiré du générateur fourni : scènes image/vidéo, 9:16/16:9,
 """
 
 from __future__ import annotations
-import asyncio, os, subprocess, textwrap
+import asyncio, os, subprocess, textwrap, shutil
 from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -14,6 +14,19 @@ from moviepy import (
     CompositeVideoClip, concatenate_videoclips
 )
 from moviepy.video.fx import Loop as VideoLoop
+
+def get_ffmpeg_exe():
+    """Return bundled FFmpeg, or a system FFmpeg as fallback."""
+    try:
+        import imageio_ffmpeg
+        exe=imageio_ffmpeg.get_ffmpeg_exe()
+        if exe and Path(exe).exists(): return exe
+    except Exception:
+        pass
+    exe=shutil.which("ffmpeg")
+    if exe: return exe
+    raise RenderError("FFmpeg est introuvable. Cette version doit être recompilée avec FFmpeg inclus.")
+
 
 VIDEO_FORMATS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
 BASE_DIR = Path(__file__).resolve().parent
@@ -228,12 +241,13 @@ def render_project(scenes, settings, output_path, log=lambda x:None):
     concat=temp/"concat.txt"
     concat.write_text("\n".join(f"file '{f.as_posix()}'" for f in files),encoding="utf-8")
     raw=temp/"assembled.mp4"
-    cmd=["ffmpeg","-y","-f","concat","-safe","0","-i",str(concat),"-c","copy",str(raw)]
+    ffmpeg=get_ffmpeg_exe()
+    cmd=[ffmpeg,"-y","-f","concat","-safe","0","-i",str(concat),"-c","copy",str(raw)]
     subprocess.run(cmd,check=True,capture_output=True,text=True)
     music=settings.get("music","")
     if music and Path(music).exists():
         log("Ajout de la musique de fond…")
-        cmd=["ffmpeg","-y","-i",str(raw),"-stream_loop","-1","-i",music,
+        cmd=[ffmpeg,"-y","-i",str(raw),"-stream_loop","-1","-i",music,
              "-filter_complex",f"[1:a]volume={settings.get('music_volume',.10)}[m];[0:a][m]amix=inputs=2:duration=first[a]",
              "-map","0:v","-map","[a]","-c:v","copy","-c:a","aac","-shortest",str(out)]
         r=subprocess.run(cmd,capture_output=True,text=True)
