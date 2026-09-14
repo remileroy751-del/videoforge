@@ -13,10 +13,10 @@ from moviepy import (
     AudioFileClip, ImageClip, VideoFileClip, CompositeAudioClip,
     CompositeVideoClip, concatenate_videoclips
 )
-from moviepy.audio.fx import MultiplyVolume
 from moviepy.video.fx import Loop as VideoLoop
 
 VIDEO_FORMATS = {"9:16": (1080, 1920), "16:9": (1920, 1080)}
+BASE_DIR = Path(__file__).resolve().parent
 VIDEO_EXTENSIONS = {".mp4",".mov",".avi",".mkv",".webm",".m4v"}
 TEXT_MODE_NONE, TEXT_MODE_FULL, TEXT_MODE_SUBTITLE = "none", "full", "subtitle"
 
@@ -75,8 +75,8 @@ def cover_video(path, size, duration):
 
 def font_for(size):
     candidates = [
-        Path("assets/fonts/Montserrat-Bold.ttf"),
-        Path("assets/fonts/DejaVuSans-Bold.ttf"),
+        BASE_DIR / "assets/fonts/Montserrat-Bold.ttf",
+        BASE_DIR / "assets/fonts/DejaVuSans-Bold.ttf",
         Path("C:/Windows/Fonts/arialbd.ttf"),
     ]
     for p in candidates:

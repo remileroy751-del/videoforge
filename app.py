@@ -7,9 +7,11 @@ import customtkinter as ctk
 import engine
 
 APP = Path(__file__).resolve().parent
-CONFIG = APP / "project.json"
-OUTPUT = APP / "output"
-TEMP = APP / "temp"
+USER_DATA = Path(os.environ.get("APPDATA", Path.home())) / "Ty-Videos-Studio"
+USER_DATA.mkdir(parents=True, exist_ok=True)
+CONFIG = USER_DATA / "project.json"
+OUTPUT = Path.home() / "Documents" / "Ty-Videos-Studio" / "output"
+TEMP = USER_DATA / "temp"
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -56,7 +58,7 @@ class SceneCard(ctk.CTkFrame):
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("VideoForge Studio")
+        self.title("Ty-Videos-Studio")
         self.geometry("1180x820"); self.minsize(1000,700)
         self.scenes=[]
         self.protocol("WM_DELETE_WINDOW",self.close)
@@ -67,7 +69,7 @@ class App(ctk.CTk):
     def build(self):
         self.grid_columnconfigure(1,weight=1); self.grid_rowconfigure(1,weight=1)
         side=ctk.CTkFrame(self,width=235,corner_radius=0,fg_color=("#eef1f7","#0e1118")); side.grid(row=0,column=0,rowspan=2,sticky="nsew")
-        ctk.CTkLabel(side,text="VIDEOFORGE",font=ctk.CTkFont(size=24,weight="bold")).pack(padx=24,pady=(28,2),anchor="w")
+        ctk.CTkLabel(side,text="TY-VIDEOS",font=ctk.CTkFont(size=24,weight="bold")).pack(padx=24,pady=(28,2),anchor="w")
         ctk.CTkLabel(side,text="STUDIO",font=ctk.CTkFont(size=12,weight="bold"),text_color="#4ea1ff").pack(padx=25,anchor="w")
         self.status=ctk.CTkLabel(side,text="● Prêt",text_color="#5bd28c"); self.status.pack(padx=25,pady=24,anchor="w")
         ctk.CTkButton(side,text="＋  Nouvelle vidéo",command=self.new).pack(padx=18,pady=5,fill="x")
@@ -93,7 +95,7 @@ class App(ctk.CTk):
         self.opts.grid_columnconfigure(1,weight=1)
         ctk.CTkLabel(self.opts,text="Réglages d'export",font=ctk.CTkFont(size=16,weight="bold")).grid(row=0,column=0,columnspan=3,sticky="w",padx=18,pady=(16,10))
         self.music=tk.StringVar(); self.voice=tk.StringVar(value="Féminine — Denise")
-        self.zoom=tk.StringVar(value="0.06"); self.output=tk.StringVar(value="ma_video.mp4")
+        self.zoom=tk.DoubleVar(value=0.06); self.output=tk.StringVar(value="ma_video.mp4")
         ctk.CTkLabel(self.opts,text="Musique").grid(row=1,column=0,sticky="w",padx=18,pady=7)
         ctk.CTkEntry(self.opts,textvariable=self.music).grid(row=1,column=1,sticky="ew",pady=7)
         ctk.CTkButton(self.opts,text="Choisir",width=80,command=self.pick_music).grid(row=1,column=2,padx=18)
@@ -112,7 +114,7 @@ class App(ctk.CTk):
         card=SceneCard(self.scene_area,self,len(self.scenes)+1,data); card.pack(fill="x",pady=7)
         self.scenes.append(card); self.renumber()
     def remove_scene(self,card):
-        if len(self.scenes)<=1:return messagebox.showwarning("VideoForge","Il faut garder au moins une scène.")
+        if len(self.scenes)<=1:return messagebox.showwarning("Ty-Videos-Studio","Il faut garder au moins une scène.")
         card.destroy(); self.scenes.remove(card); self.renumber()
     def renumber(self):
         for i,c in enumerate(self.scenes,1): c.title.configure(text=f"SCÈNE {i}")
@@ -157,25 +159,25 @@ class App(ctk.CTk):
         data={"format":self.format.get(),"music":self.music.get(),"voice":self.voice.get(),"zoom":self.zoom.get(),"output":self.output.get(),
               "scenes":[s.get() for s in self.scenes]}
         CONFIG.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
-        self.write_log("Projet enregistré.")
+        self.write_log("Projet enregistré dans les données utilisateur.")
     def load(self):
         if not CONFIG.exists():return
         try:
             d=json.loads(CONFIG.read_text(encoding="utf-8"))
             self.set_format("9:16  Vertical" if d.get("format","9:16")=="9:16" else "16:9  Horizontal")
             self.music.set(d.get("music","")); self.voice.set(d.get("voice","Féminine — Denise"))
-            self.zoom.set(d.get("zoom","0.06")); self.output.set(d.get("output","ma_video.mp4"))
+            self.zoom.set(float(d.get("zoom",0.06))); self.output.set(d.get("output","ma_video.mp4"))
             for s in d.get("scenes",[]): self.add_scene(s)
         except Exception: pass
     def open_project(self):
-        p=filedialog.askopenfilename(title="Ouvrir un projet",filetypes=[("Projet VideoForge","*.json")])
+        p=filedialog.askopenfilename(title="Ouvrir un projet",filetypes=[("Projet Ty-Videos-Studio","*.json")])
         if not p:return
         try:
             d=json.loads(Path(p).read_text(encoding="utf-8"))
             for s in self.scenes:s.destroy()
             self.scenes=[]
             self.set_format("9:16  Vertical" if d.get("format","9:16")=="9:16" else "16:9  Horizontal")
-            self.music.set(d.get("music","")); self.voice.set(d.get("voice","Féminine — Denise")); self.zoom.set(d.get("zoom","0.06")); self.output.set(d.get("output","ma_video.mp4"))
+            self.music.set(d.get("music","")); self.voice.set(d.get("voice","Féminine — Denise")); self.zoom.set(float(d.get("zoom",0.06))); self.output.set(d.get("output","ma_video.mp4"))
             for s in d.get("scenes",[]):self.add_scene(s)
         except Exception as e:messagebox.showerror("Projet",str(e))
     def new(self):

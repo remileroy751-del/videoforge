@@ -42,7 +42,7 @@ jobs:
 
       - name: Construire l'application
         run: |
-          pyinstaller --noconfirm --clean --windowed --name VideoForge-Studio --icon assets/app.ico --add-data "assets;assets" --collect-all customtkinter --copy-metadata imageio --copy-metadata imageio-ffmpeg --copy-metadata moviepy app.py
+          pyinstaller --noconfirm --clean --windowed --name Ty-Videos-Studio --icon assets/app.ico --add-data "assets;assets" --collect-all customtkinter --collect-all moviepy --collect-all imageio --collect-all imageio_ffmpeg --copy-metadata imageio --copy-metadata imageio-ffmpeg --copy-metadata moviepy app.py
 
       - name: Construire l'installateur Windows
         shell: pwsh
@@ -53,12 +53,12 @@ jobs:
       - name: Vérifier l'installateur
         shell: pwsh
         run: |
-          if (!(Test-Path "installer_output\VideoForge-Studio-Setup.exe")) { throw "Installateur non généré." }
-          Get-Item "installer_output\VideoForge-Studio-Setup.exe" | Format-List Name,Length,FullName
+          if (!(Test-Path "installer_output\Ty-Videos-Studio-Setup.exe")) { throw "Installateur non généré." }
+          Get-Item "installer_output\Ty-Videos-Studio-Setup.exe" | Format-List Name,Length,FullName
 
       - name: Publier l'installateur
         uses: actions/upload-artifact@v4
         with:
-          name: VideoForge-Studio-Windows
-          path: installer_output/VideoForge-Studio-Setup.exe
+          name: Ty-Videos-Studio-Windows
+          path: installer_output/Ty-Videos-Studio-Setup.exe
           if-no-files-found: error

@@ -1,4 +1,4 @@
-# VideoForge Studio — Windows
+# Ty-Videos-Studio — Windows
 
 Application de bureau pour créer facilement des vidéos verticales **9:16** ou horizontales **16:9**.
 
@@ -23,7 +23,7 @@ Le moteur reprend les principes du fichier source fourni : formats 9:16/16:9, fo
 2. Envoie tout le contenu de ce dossier dans le dépôt.
 3. Va dans **Actions**.
 4. Lance **Build Windows**.
-5. Télécharge l'artefact `VideoForge-Studio-Windows`.
+5. Télécharge l'artefact `Ty-Videos-Studio-Windows`.
 6. Tu obtiendras un installateur `.exe`.
 7. Lance l'installateur : il crée automatiquement le raccourci sur le Bureau.
 
