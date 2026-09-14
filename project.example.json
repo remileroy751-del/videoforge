@@ -1,0 +1,19 @@
+{
+  "format": "9:16",
+  "music": "",
+  "voice": "Féminine — Denise",
+  "zoom": "0.06",
+  "output": "ma_video.mp4",
+  "scenes": [
+    {
+      "text": "Votre première scène vidéo.",
+      "background": "",
+      "text_mode": "full"
+    },
+    {
+      "text": "Une deuxième scène avec sous-titres.",
+      "background": "",
+      "text_mode": "subtitle"
+    }
+  ]
+}

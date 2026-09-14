@@ -1,0 +1,5 @@
+customtkinter>=5.2.2
+edge-tts>=6.1
+moviepy>=2.2
+pillow>=10.0
+numpy>=1.24
