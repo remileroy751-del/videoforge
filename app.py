@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, os, sys, threading, traceback
+import json, os, sys, threading, traceback, queue
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -61,6 +61,8 @@ class App(ctk.CTk):
         self.title("Ty-Videos-Studio")
         self.geometry("1180x820"); self.minsize(1000,700)
         self.scenes=[]
+        self.log_queue=queue.Queue()
+        self.after(100, self.flush_log_queue)
         self.protocol("WM_DELETE_WINDOW",self.close)
         self.build()
         self.load()
@@ -123,7 +125,19 @@ class App(ctk.CTk):
         p=filedialog.askopenfilename(title="Choisir une musique",filetypes=[("Audio","*.mp3 *.wav *.m4a *.ogg"),("Tous","*.*")])
         if p:self.music.set(p)
     def write_log(self,s):
-        self.after(0,lambda:(self.log.insert("end",s+"\n"),self.log.see("end")))
+        # Thread-safe: the render thread never touches Tkinter directly.
+        self.log_queue.put(str(s))
+
+    def flush_log_queue(self):
+        try:
+            while True:
+                msg=self.log_queue.get_nowait()
+                self.log.insert("end",msg+"\n")
+                self.log.see("end")
+        except queue.Empty:
+            pass
+        if self.winfo_exists():
+            self.after(100,self.flush_log_queue)
     def collect(self):
         scenes=[s.get() for s in self.scenes]
         for i,s in enumerate(scenes,1):
@@ -170,6 +184,9 @@ class App(ctk.CTk):
         threading.Thread(target=work,daemon=True).start()
 
     def render_success(self,result):
+        if not Path(result).exists() or Path(result).stat().st_size < 10000:
+            self.render_error("Le moteur a terminé sans produire un fichier MP4 valide.")
+            return
         self.status.configure(text="● Vidéo créée",text_color="#5bd28c")
         messagebox.showinfo("Ty-Videos-Studio",f"La vidéo a été créée avec succès.\n\nFichier :\n{result}")
 

@@ -9,6 +9,16 @@ import asyncio, os, subprocess, textwrap, shutil
 from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+
+# Force MoviePy to use the FFmpeg executable bundled by imageio-ffmpeg.
+try:
+    import imageio_ffmpeg
+    _ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    if _ffmpeg and Path(_ffmpeg).exists():
+        os.environ["IMAGEIO_FFMPEG_EXE"] = _ffmpeg
+except Exception:
+    pass
+
 from moviepy import (
     AudioFileClip, ImageClip, VideoFileClip, CompositeAudioClip,
     CompositeVideoClip, concatenate_videoclips
@@ -234,10 +244,16 @@ def render_project(scenes, settings, output_path, log=lambda x:None):
         log(f"Scène {i}/{len(scenes)} — rendu…")
         clip=_render_scene(s,i,settings,temp,log)
         fp=temp/f"scene_{i:03d}.mp4"
-        clip.write_videofile(str(fp),fps=settings["fps"],codec="libx264",audio_codec="aac",
-                             logger=None,threads=2)
-        clip.close(); files.append(fp)
-        log(f"✓ Scène {i} terminée")
+        try:
+            log(f"Scène {i}: encodage MP4 en cours…")
+            clip.write_videofile(str(fp),fps=settings["fps"],codec="libx264",audio_codec="aac",
+                                 logger=None,threads=2,preset="medium")
+        finally:
+            clip.close()
+        if not fp.exists() or fp.stat().st_size < 10000:
+            raise RenderError(f"Scène {i}: le fichier vidéo n'a pas été généré correctement.")
+        files.append(fp)
+        log(f"✓ Scène {i} terminée : {fp.name}")
     concat=temp/"concat.txt"
     concat.write_text("\n".join(f"file '{f.as_posix()}'" for f in files),encoding="utf-8")
     raw=temp/"assembled.mp4"
@@ -251,8 +267,12 @@ def render_project(scenes, settings, output_path, log=lambda x:None):
              "-filter_complex",f"[1:a]volume={settings.get('music_volume',.10)}[m];[0:a][m]amix=inputs=2:duration=first[a]",
              "-map","0:v","-map","[a]","-c:v","copy","-c:a","aac","-shortest",str(out)]
         r=subprocess.run(cmd,capture_output=True,text=True)
-        if r.returncode!=0: raw.replace(out)
-    else: raw.replace(out)
+        if r.returncode!=0:
+            log("Musique : impossible de mixer la musique, conservation de la vidéo sans musique.")
+            log(r.stderr[-1200:])
+            raw.replace(out)
+    else:
+        raw.replace(out)
     for f in files:
         try:f.unlink()
         except:pass
