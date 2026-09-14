@@ -172,7 +172,11 @@ def subtitle_overlay(text, size):
 
 async def tts(text, out, voice_name, pitch):
     import edge_tts
-    await edge_tts.Communicate(text, voice_name, pitch=pitch).save(str(out))
+    # Edge TTS is network-based. Give it a finite timeout so the application
+    # cannot remain indefinitely in "Production en cours" when the network
+    # is unavailable.
+    communicate = edge_tts.Communicate(text, voice_name, pitch=pitch)
+    await asyncio.wait_for(communicate.save(str(out)), timeout=90)
 
 def _render_scene(scene, idx, settings, temp_dir, log):
     fmt=settings["format"]; size=VIDEO_FORMATS[fmt]
@@ -181,7 +185,11 @@ def _render_scene(scene, idx, settings, temp_dir, log):
     if not bg.exists(): raise RenderError(f"Scène {idx}: média introuvable: {bg}")
     check_media_format(bg,fmt)
     audio=temp_dir/f"voice_{idx}.mp3"
+    log(f"Scène {idx}: génération de la voix off…")
     asyncio.run(tts(text,audio,settings["voice"],settings["pitch"]))
+    if not audio.exists() or audio.stat().st_size == 0:
+        raise RenderError(f"Scène {idx}: la voix off n’a pas été générée.")
+    log(f"Scène {idx}: voix off terminée — fichier audio OK.")
     voice=AudioFileClip(str(audio)); dur=voice.duration
     pause=.55; total=dur+pause
     mode=scene.get("text_mode",TEXT_MODE_NONE)
@@ -236,6 +244,11 @@ def _render_scene(scene, idx, settings, temp_dir, log):
     return visual.with_audio(CompositeAudioClip([voice]))
 
 def render_project(scenes, settings, output_path, log=lambda x:None):
+    log("Vérification du moteur vidéo…")
+    if not scenes:
+        raise RenderError("Aucune scène à produire.")
+    ffmpeg = get_ffmpeg_exe()
+    log(f"FFmpeg : {Path(ffmpeg).name}")
     root=Path(settings.get("project_dir",".")).resolve()
     temp=Path(settings.get("temp_dir",root/"temp")); temp.mkdir(parents=True,exist_ok=True)
     out=Path(output_path); out.parent.mkdir(parents=True,exist_ok=True)
@@ -257,7 +270,6 @@ def render_project(scenes, settings, output_path, log=lambda x:None):
     concat=temp/"concat.txt"
     concat.write_text("\n".join(f"file '{f.as_posix()}'" for f in files),encoding="utf-8")
     raw=temp/"assembled.mp4"
-    ffmpeg=get_ffmpeg_exe()
     cmd=[ffmpeg,"-y","-f","concat","-safe","0","-i",str(concat),"-c","copy",str(raw)]
     subprocess.run(cmd,check=True,capture_output=True,text=True)
     music=settings.get("music","")

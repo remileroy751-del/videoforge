@@ -62,14 +62,16 @@ class App(ctk.CTk):
         self.geometry("1180x820"); self.minsize(1000,700)
         self.scenes=[]
         self.log_queue=queue.Queue()
+        self.ui_queue=queue.Queue()
         self.after(100, self.flush_log_queue)
+        self.after(100, self.flush_ui_queue)
         self.protocol("WM_DELETE_WINDOW",self.close)
         self.build()
         self.load()
         if not self.scenes:
             self.add_scene(); self.add_scene()
     def build(self):
-        self.grid_columnconfigure(1,weight=1); self.grid_rowconfigure(1,weight=1)
+        self.grid_columnconfigure(1,weight=1); self.grid_rowconfigure(1,weight=1); self.grid_rowconfigure(2,weight=0)
         side=ctk.CTkFrame(self,width=235,corner_radius=0,fg_color=("#eef1f7","#0e1118")); side.grid(row=0,column=0,rowspan=2,sticky="nsew")
         ctk.CTkLabel(side,text="TY-VIDEOS",font=ctk.CTkFont(size=24,weight="bold")).pack(padx=24,pady=(28,2),anchor="w")
         ctk.CTkLabel(side,text="STUDIO",font=ctk.CTkFont(size=12,weight="bold"),text_color="#4ea1ff").pack(padx=25,anchor="w")
@@ -109,8 +111,14 @@ class App(ctk.CTk):
         ctk.CTkLabel(self.opts,textvariable=self.zoom).grid(row=3,column=2,padx=18)
         ctk.CTkLabel(self.opts,text="Nom du fichier").grid(row=4,column=0,sticky="w",padx=18,pady=(7,18))
         ctk.CTkEntry(self.opts,textvariable=self.output).grid(row=4,column=1,sticky="w",pady=(7,18))
-        self.progress=ctk.CTkProgressBar(self.scroll); self.progress.set(0); self.progress.grid(row=3,column=0,sticky="ew",padx=24,pady=(2,6))
-        self.log=ctk.CTkTextbox(self.scroll,height=120); self.log.grid(row=4,column=0,sticky="ew",padx=24,pady=(4,24))
+        # Fixed production console: always visible at the bottom of the window,
+        # independently from the scenes scroll area.
+        bottom=ctk.CTkFrame(self,corner_radius=0,fg_color=("#eef1f7","#11151e"),border_width=1,border_color=("#dfe3ec","#242a38"))
+        bottom.grid(row=2,column=1,sticky="ew")
+        bottom.grid_columnconfigure(0,weight=1)
+        self.progress=ctk.CTkProgressBar(bottom,height=8); self.progress.set(0); self.progress.grid(row=0,column=0,sticky="ew",padx=18,pady=(10,5))
+        self.log=ctk.CTkTextbox(bottom,height=135,corner_radius=8); self.log.grid(row=1,column=0,sticky="ew",padx=18,pady=(2,10))
+        self.log.insert("end","Console de production — en attente d'une vidéo.\n")
     def set_format(self,v):
         self.format.set("9:16" if v.startswith("9:16") else "16:9")
     def add_scene(self,data=None):
@@ -125,7 +133,7 @@ class App(ctk.CTk):
         p=filedialog.askopenfilename(title="Choisir une musique",filetypes=[("Audio","*.mp3 *.wav *.m4a *.ogg"),("Tous","*.*")])
         if p:self.music.set(p)
     def write_log(self,s):
-        # Thread-safe: the render thread never touches Tkinter directly.
+        # Only the Tk main thread updates widgets.
         self.log_queue.put(str(s))
 
     def flush_log_queue(self):
@@ -138,6 +146,22 @@ class App(ctk.CTk):
             pass
         if self.winfo_exists():
             self.after(100,self.flush_log_queue)
+
+    def post_ui(self, kind, value=None):
+        self.ui_queue.put((kind, value))
+
+    def flush_ui_queue(self):
+        try:
+            while True:
+                kind,value=self.ui_queue.get_nowait()
+                if kind=="success": self.render_success(value)
+                elif kind=="error": self.render_error(value)
+                elif kind=="finish": self.finish()
+        except queue.Empty:
+            pass
+        if self.winfo_exists():
+            self.after(100,self.flush_ui_queue)
+
     def collect(self):
         scenes=[s.get() for s in self.scenes]
         for i,s in enumerate(scenes,1):
@@ -174,13 +198,13 @@ class App(ctk.CTk):
         def work():
             try:
                 result=engine.render_project(scenes,settings,out,self.write_log)
-                self.after(0,lambda:self.render_success(result))
+                self.post_ui("success", result)
             except Exception as e:
                 self.write_log("ERREUR DE PRODUCTION : "+str(e))
                 self.write_log(traceback.format_exc())
-                self.after(0,lambda msg=str(e):self.render_error(msg))
+                self.post_ui("error", str(e))
             finally:
-                self.after(0,self.finish)
+                self.post_ui("finish")
         threading.Thread(target=work,daemon=True).start()
 
     def render_success(self,result):

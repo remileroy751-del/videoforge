@@ -41,3 +41,6 @@ Le workflow inclut les métadonnées de `imageio`, `imageio-ffmpeg` et `moviepy`
 
 ### Production vidéo
 FFmpeg est inclus dans la compilation Windows via imageio-ffmpeg. L’utilisateur final n’a pas besoin d’installer FFmpeg séparément. Edge TTS nécessite Internet.
+
+
+La console de production est fixée en bas de la fenêtre et affiche les étapes du rendu. En cas d'erreur, un message détaillé est affiché.
