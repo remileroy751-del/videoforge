@@ -32,3 +32,8 @@ FFmpeg est installé par le workflow GitHub et intégré au dossier de l'applica
 Edge TTS nécessite une connexion Internet pour générer les voix.
 
 Le clonage vocal XTTS n'est pas inclus par défaut dans le build Windows afin d'éviter un installateur de plusieurs gigaoctets et des incompatibilités de version. Il peut être ajouté comme module optionnel dans une future version.
+
+
+### Correction démarrage Windows
+
+Le workflow inclut les métadonnées de `imageio`, `imageio-ffmpeg` et `moviepy`. MoviePy charge ImageIO au démarrage et ImageIO recherche sa version via `importlib.metadata`. Sans ces métadonnées, PyInstaller peut provoquer `PackageNotFoundError: No package metadata was found for imageio`.

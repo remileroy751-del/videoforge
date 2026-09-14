@@ -42,7 +42,7 @@ jobs:
 
       - name: Construire l'application
         run: |
-          pyinstaller --noconfirm --clean --windowed --name VideoForge-Studio --icon assets/app.ico --add-data "assets;assets" --collect-all customtkinter app.py
+          pyinstaller --noconfirm --clean --windowed --name VideoForge-Studio --icon assets/app.ico --add-data "assets;assets" --collect-all customtkinter --copy-metadata imageio --copy-metadata imageio-ffmpeg --copy-metadata moviepy app.py
 
       - name: Construire l'installateur Windows
         shell: pwsh
