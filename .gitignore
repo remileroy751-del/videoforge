@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+project.json
+installer_output/
+build/
+dist/
+output/*.mp4
+temp/*

@@ -1,47 +1,64 @@
 name: Build Windows
 
 on:
-  workflow_dispatch:
+  # Compilation automatique à chaque modification sur main
   push:
+    branches:
+      - main
+      - master
     tags:
       - "v*"
+  # Permet aussi de lancer la compilation manuellement
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Checkout
+      - name: Récupérer le projet
         uses: actions/checkout@v4
 
-      - name: Python
+      - name: Installer Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
-      - name: FFmpeg
+      - name: Installer FFmpeg
         shell: pwsh
         run: |
-          choco install ffmpeg -y
+          choco install ffmpeg -y --no-progress
           ffmpeg -version
 
-      - name: Install Python dependencies
+      - name: Installer les dépendances Python
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build application
+      - name: Vérifier les fichiers Python
         run: |
-          pyinstaller --noconfirm --clean --windowed --name VideoForge-Studio --icon assets/app.ico --collect-all customtkinter app.py
+          python -m py_compile app.py engine.py
 
-      - name: Build installer
+      - name: Construire l'application
+        run: |
+          pyinstaller --noconfirm --clean --windowed --name VideoForge-Studio --icon assets/app.ico --add-data "assets;assets" --collect-all customtkinter app.py
+
+      - name: Construire l'installateur Windows
         shell: pwsh
         run: |
-          choco install innosetup -y
+          choco install innosetup -y --no-progress
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
 
-      - name: Upload installer
+      - name: Vérifier l'installateur
+        shell: pwsh
+        run: |
+          if (!(Test-Path "installer_output\VideoForge-Studio-Setup.exe")) { throw "Installateur non généré." }
+          Get-Item "installer_output\VideoForge-Studio-Setup.exe" | Format-List Name,Length,FullName
+
+      - name: Publier l'installateur
         uses: actions/upload-artifact@v4
         with:
           name: VideoForge-Studio-Windows
           path: installer_output/VideoForge-Studio-Setup.exe
+          if-no-files-found: error

@@ -1,10 +1,10 @@
 #define MyAppName "VideoForge Studio"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "VideoForge Studio"
 #define MyAppExeName "VideoForge-Studio.exe"
 
 [Setup]
-AppId={{9A6A7F3E-3F1B-4B55-9B6C-VIDEOFORGESTUDIO}}
+AppId={{9A6A7F3E-3F1B-4B55-9B6C-123456789ABC}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -21,6 +21,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Files]
 Source: "dist\VideoForge-Studio\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "assets\app.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\VideoForge Studio"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\app.ico"
