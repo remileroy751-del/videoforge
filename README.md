@@ -55,18 +55,32 @@ cette étape.
 
 Le clonage vocal XTTS n'est pas inclus par défaut dans le build Windows afin d'éviter un installateur de plusieurs gigaoctets et des incompatibilités de version. Il peut être ajouté comme module optionnel dans une future version.
 
-### Correction démarrage Windows
+### Correction démarrage Windows / compilation robuste (fichier .spec)
 
-Le workflow inclut les métadonnées de `imageio`, `imageio-ffmpeg`, `moviepy`
-ainsi que celles du module de reconnaissance vocale (`faster-whisper`,
-`ctranslate2`, `tokenizers`, `huggingface_hub`, etc.). MoviePy charge
-ImageIO au démarrage et ImageIO recherche sa version via
-`importlib.metadata`. Sans ces métadonnées, PyInstaller peut provoquer
-`PackageNotFoundError: No package metadata was found for imageio`. Si la
-compilation GitHub Actions échoue sur une erreur similaire pour un autre
-module, ajoute simplement `--collect-all <module>` et/ou
-`--copy-metadata <module>` (nom exact indiqué dans le message d'erreur) à
-la commande PyInstaller du workflow.
+MoviePy charge ImageIO au démarrage, et ImageIO recherche sa version via
+`importlib.metadata` : sans ses métadonnées incluses dans l'exécutable,
+PyInstaller provoque `PackageNotFoundError: No package metadata was
+found for imageio`. Le module de reconnaissance vocale (`faster-whisper`,
+`ctranslate2`, `tokenizers`, `huggingface_hub`, etc.) a les mêmes besoins.
+
+Le workflow compile désormais l'application à partir d'un fichier
+**`Ty-Videos-Studio.spec`** (plutôt que des options `--collect-all` /
+`--copy-metadata` passées directement en ligne de commande). Raison :
+`--copy-metadata <paquet>` fait échouer **toute** la compilation dès
+qu'un seul paquet demandé n'est pas installé sous exactement ce nom de
+distribution (ex. `requests` peut être absent selon la version résolue
+de `huggingface_hub`, ce qui a fait échouer une première tentative de
+build). Dans `Ty-Videos-Studio.spec`, chaque appel `collect_all(...)` et
+`copy_metadata(...)` est protégé individuellement par un `try/except` :
+si un paquet listé est introuvable, il est simplement ignoré (avec un
+message dans le journal de build "Actions"), sans jamais interrompre la
+compilation.
+
+Si une prochaine version de l'application a besoin d'un nouveau paquet
+Python avec ses données ou métadonnées, ajoute son nom dans la liste
+`COLLECT_ALL_PACKAGES` et/ou `COPY_METADATA_PACKAGES` en tête de
+`Ty-Videos-Studio.spec` (nom d'import avec underscore pour la première
+liste, nom de distribution pip avec tiret pour la seconde).
 
 ### Correction : "Production en cours…" qui ne se terminait jamais
 
