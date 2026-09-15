@@ -1,5 +1,5 @@
 #define MyAppName "Ty-Videos-Studio"
-#define MyAppVersion "1.0.2"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "Ty-Videos-Studio"
 #define MyAppExeName "Ty-Videos-Studio.exe"
 

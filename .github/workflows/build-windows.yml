@@ -39,12 +39,38 @@ jobs:
 
       - name: Vérifier les fichiers Python
         run: |
-          python -m py_compile app.py engine.py
+          python -m py_compile app.py engine.py winfix.py
           python -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())"
 
       - name: Construire l'application
         run: |
-          pyinstaller --noconfirm --clean --windowed --name Ty-Videos-Studio --icon assets/app.ico --add-data "assets;assets" --collect-all customtkinter --collect-all moviepy --collect-all imageio --collect-all imageio_ffmpeg --copy-metadata imageio --copy-metadata imageio-ffmpeg --copy-metadata moviepy app.py
+          pyinstaller --noconfirm --clean --windowed --name Ty-Videos-Studio --icon assets/app.ico --add-data "assets;assets" `
+            --collect-all customtkinter `
+            --collect-all moviepy `
+            --collect-all imageio `
+            --collect-all imageio_ffmpeg `
+            --collect-all faster_whisper `
+            --collect-all ctranslate2 `
+            --collect-all tokenizers `
+            --collect-all huggingface_hub `
+            --collect-all onnxruntime `
+            --collect-all av `
+            --collect-all certifi `
+            --copy-metadata imageio `
+            --copy-metadata imageio-ffmpeg `
+            --copy-metadata moviepy `
+            --copy-metadata faster-whisper `
+            --copy-metadata ctranslate2 `
+            --copy-metadata tokenizers `
+            --copy-metadata huggingface-hub `
+            --copy-metadata tqdm `
+            --copy-metadata requests `
+            --copy-metadata packaging `
+            --copy-metadata filelock `
+            --copy-metadata pyyaml `
+            --copy-metadata regex `
+            --copy-metadata numpy `
+            app.py
 
       - name: Construire l'installateur Windows
         shell: pwsh

@@ -1,4 +1,5 @@
 {
+  "mode": "scenes",
   "format": "9:16",
   "music": "",
   "voice": "Féminine — Denise",
@@ -15,5 +16,8 @@
       "background": "",
       "text_mode": "subtitle"
     }
-  ]
+  ],
+  "voice_over_path": "",
+  "media_paths": [],
+  "subtitle_style": "Classique (bas d'écran)"
 }
